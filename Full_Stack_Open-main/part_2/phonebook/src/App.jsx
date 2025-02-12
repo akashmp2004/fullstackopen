@@ -1,140 +1,102 @@
-import { useState, useEffect } from "react";
-import Filter from "./components/Filter";
-import Persons from "./components/Persons";
-import PersonForm from "./components/PersonForm";
-import Notification from "./components/Notification";
-import personService from "./services/persons";
+import React, { useState } from 'react';
 
 const App = () => {
-  const [allPersons, setAllPersons] = useState([]);
-  const [filterStr, setFilterStr] = useState("");
-  const [newPerson, setNewPerson] = useState({ name: "", number: "" });
-  const [notification, setNotification] = useState(null);
+const [contacts, setContacts] = useState([
+{ id: 1, name: 'akshay', number: '+91 123 456 7890' },
+{ id: 2, name: 'adwaith', number: '+91 20 7946 0958' },
+{ id: 3, name: 'abinav', number: '+91 98765 43210' },
+]);
 
-  useEffect(() => {
-    personService.getAll().then((persons) => {
-      setAllPersons(persons);
-    });
-  }, []);
+const [newName, setNewName] = useState('');
+const [newNumber, setNewNumber] = useState('');
+const [searchQuery, setSearchQuery] = useState('');
+const [searchType, setSearchType] = useState('name');
 
-  useEffect(() => {
-    if (notification) {
-      const timer = setTimeout(() => {
-        setNotification(null);
-      }, 4000);
+// Add a new contact
+const addContact = (event) => {
+event.preventDefault();
+if (!newName || !newNumber) return;
 
-      return () => {
-        clearTimeout(timer);
-      };
-    }
-  }, [notification]);
+const duplicate = contacts.some(
+(contact) => contact.name.toLowerCase() === newName.toLowerCase()
+);
+if (duplicate) {
+alert('Name already exists in phonebook!');
+return;
+}
 
-  const handleSubmit = (event) => {
-    event.preventDefault();
-    const result = allPersons.find(
-      (person) => person.name === newPerson.name.trim()
-    );
-    if (!result) {
-      personService
-        .create(newPerson)
-        .then((person) => {
-          setAllPersons((prevPersons) => prevPersons.concat(person));
-          setNewPerson({ name: "", number: "" });
-          setNotification({
-            type: "success",
-            text: `${person.name} was successfully added`,
-          });
-        })
-        .catch((error) => {
-          setNotification({
-            type: "error",
-            text: error.response?.data?.error || "unknown error",
-          });
-        });
-    } else {
-      if (
-        window.confirm(
-          `${newPerson.name} is already added to phonebook, replace the old number with a new one?`
-        )
-      ) {
-        personService
-          .update(result.id, newPerson)
-          .then((updatedPerson) => {
-            setAllPersons((prevPersons) =>
-              prevPersons.map((person) =>
-                person.id !== updatedPerson.id ? person : updatedPerson
-              )
-            );
-            setNewPerson({ name: "", number: "" });
-            setNotification({
-              type: "success",
-              text: `${newPerson.name} was successfully updated`,
-            });
-          })
-          .catch((error) => {
-            if (error.response?.status === 404) {
-              setAllPersons((prevPersons) =>
-                prevPersons.filter((person) => person.id !== result.id)
-              );
-              setNotification({
-                type: "error",
-                text: `Information of ${newPerson.name} has already removed from server`,
-              });
-            } else {
-              setNotification({
-                type: "error",
-                text: error.response?.data?.error || "unknown error",
-              });
-            }
-          });
-      }
-    }
-  };
+const newContact = {
+id: contacts.length + 1,
+name: newName,
+number: newNumber,
+};
 
-  const handleFormChange = ({ target: { name, value } }) => {
-    setNewPerson((newPerson) => ({
-      ...newPerson,
-      [name]: value,
-    }));
-  };
+setContacts([...contacts, newContact]);
+setNewName('');
+setNewNumber('');
+};
 
-  const handleChangeFilter = (event) => {
-    setFilterStr(event.target.value);
-  };
+// Filter contacts based on search type
+const filteredContacts = contacts.filter((contact) => {
+if (searchType === 'name') {
+return contact.name.toLowerCase().includes(searchQuery.toLowerCase());
+} else {
+return contact.number.includes(searchQuery);
+}
+});
 
-  const handleRemove = (id, name) => {
-    if (window.confirm(`Delete ${name}?`)) {
-      personService.remove(id).then(() => {
-        setAllPersons((prevPersons) =>
-          prevPersons.filter((person) => person.id !== id)
-        );
-        setNotification({
-          type: "success",
-          text: `${name} was successfully deleted`,
-        });
-      });
-    }
-  };
+return (
+<div>
+<h2>Phonebook</h2>
 
-  return (
-    <>
-      <h2>Phonebook</h2>
-      <Notification notification={notification} />
-      <Filter filterStr={filterStr} handleChangeFilter={handleChangeFilter} />
-      <h3>add a new</h3>
-      <PersonForm
-        newPerson={newPerson}
-        handleSubmit={handleSubmit}
-        handleFormChange={handleFormChange}
-      />
-      <h3>Numbers</h3>
-      <Persons
-        filterStr={filterStr}
-        allPersons={allPersons}
-        handleRemove={handleRemove}
-      />
-    </>
-  );
+{/* Add Contact Form */}
+<form onSubmit={addContact}>
+<input
+type="text"
+value={newName}
+onChange={(e) => setNewName(e.target.value)}
+placeholder="Enter name"
+required
+/>
+<input
+type="text"
+value={newNumber}
+onChange={(e) => setNewNumber(e.target.value)}
+placeholder="Enter phone number"
+required
+/>
+<button type="submit">Add</button>
+</form>
+
+{/* Search Section */}
+<h3>Search Contacts</h3>
+<select value={searchType} onChange={(e) => setSearchType(e.target.value)}>
+<option value="name">Search by Name</option>
+<option value="number">Search by Number</option>
+</select>
+<input
+type="text"
+value={searchQuery}
+onChange={(e) => setSearchQuery(e.target.value)}
+placeholder={searchType === 'name' ? 'Enter name' : 'Enter phone number'}
+/>
+
+{/* Display Contacts */}
+<h3>Contacts</h3>
+<ul>
+{filteredContacts.length > 0 ? (
+filteredContacts.map((contact) => (
+<li key={contact.id}>
+{contact.name} - {contact.number}
+</li>
+))
+) : (
+<p>No contacts found</p>
+)}
+</ul>
+</div>
+);
 };
 
 export default App;
+
