@@ -47,7 +47,7 @@ return contact.number.includes(searchQuery);
 
 return (
 <div>
-<h2>Phonebook</h2>
+<h2>PHONEBOOK</h2>
 
 {/* Add Contact Form */}
 <form onSubmit={addContact}>
